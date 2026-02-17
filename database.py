@@ -1,8 +1,10 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Text, DateTime, Enum as SQLEnum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 import os
 from dotenv import load_dotenv
+from datetime import datetime
+from schemas import ApplicationStatus
 
 load_dotenv()
 
@@ -34,15 +36,21 @@ class User(Base):
     # relationship is one user has many applications
     applications = relationship("JobApplication", back_populates="user")
 
+
 # job application model
 class JobApplication(Base):
     __tablename__ = "applications" # name of table
 
     id = Column(Integer, primary_key=True, index=True) # auto incrementing id
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    company = Column(String)
-    position = Column(String) 
-    status = Column(String) 
+    company = Column(String, nullable=False)
+    position = Column(String, nullable=False) 
+    status = Column(SQLEnum(ApplicationStatus), default=ApplicationStatus.WISHLIST) 
+    job_url = Column(String, nullable=True) # link to job posting
+    notes = Column(Text, nullable=True) # whatever notes user has about the job
+    applied_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.now) # automatically sets on creation
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     # each application belongs to one user
     user = relationship("User", back_populates="applications")

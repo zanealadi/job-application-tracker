@@ -101,18 +101,16 @@ def create_application(application: ApplicationCreate, current_user: User = Depe
         user_id=current_user.id, # this links to the logged in user
         company=application.company,
         position=application.position,
-        status=application.status
+        status=application.status,
+        job_url=application.job_url,
+        notes=application.notes,
+        applied_date=application.applied_date
     )
 
     db.add(new_app)
     db.commit()
     db.refresh(new_app)
-    return {"message": "Application Created!", "application" : {
-        "id": new_app.id,
-        "company": new_app.company,
-        "position": new_app.position,
-        "status": new_app.status
-    }}
+    return new_app
 
 # get all applications
 @app.get("/applications", response_model=ApplicationListResponse)
