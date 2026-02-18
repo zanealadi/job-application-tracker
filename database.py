@@ -49,6 +49,7 @@ class JobApplication(Base):
     job_url = Column(String, nullable=True) # link to job posting
     notes = Column(Text, nullable=True) # whatever notes user has about the job
     applied_date = Column(DateTime, nullable=True)
+    salary_range = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.now) # automatically sets on creation
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 

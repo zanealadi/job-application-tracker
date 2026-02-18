@@ -104,7 +104,8 @@ def create_application(application: ApplicationCreate, current_user: User = Depe
         status=application.status,
         job_url=application.job_url,
         notes=application.notes,
-        applied_date=application.applied_date
+        applied_date=application.applied_date,
+        salary_range=application.salary_range
     )
 
     db.add(new_app)
@@ -127,7 +128,7 @@ def get_application_with_id(app_id: int, current_user: User = Depends(get_curren
     return app
 
 # update an application
-@app.put("/application/{app_id}", response_model=ApplicationResponse)
+@app.put("/applications/{app_id}", response_model=ApplicationResponse)
 def update_application(app_id: int, application_update: ApplicationUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     app = db.query(JobApplication).filter(JobApplication.id == app_id, JobApplication.user_id == current_user.id).first()
     if not app:
@@ -139,13 +140,21 @@ def update_application(app_id: int, application_update: ApplicationUpdate, curre
         app.position = application_update.position
     if application_update.status is not None:
         app.status = application_update.status
+    if application_update.job_url is not None:
+        app.job_url = application_update.job_url
+    if application_update.notes is not None:
+        app.notes = application_update.notes
+    if application_update.applied_date is not None:
+        app.applied_date = application_update.applied_date
+    if application_update.salary_range is not None:
+        app.salary_range = application_update.salary_range
 
     db.commit()
     db.refresh(app)
     return app
 
 # delete an application
-@app.delete("/application/{app_id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/applications/{app_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_application(app_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     app = db.query(JobApplication).filter(JobApplication.id == app_id, JobApplication.user_id == current_user.id).first()
     if not app:

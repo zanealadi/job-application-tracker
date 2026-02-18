@@ -45,6 +45,7 @@ class ApplicationCreate(BaseModel):
     job_url: Optional[str] = Field(None, description="Link to job posting")
     notes: Optional[str] = Field(None, description="Your notes about this job")
     applied_date: Optional[datetime] = Field(None, description="When you applied")
+    salary_range: Optional[str] = Field(None, example="$80k-$100k")
 
 # schema for updating an application
 class ApplicationUpdate(BaseModel):
@@ -54,6 +55,7 @@ class ApplicationUpdate(BaseModel):
     job_url: Optional[str] = None
     notes: Optional[str] = None
     applied_date: Optional[datetime] = None
+    salary_range: Optional[str] = None
 
 # schema for application in responses
 class ApplicationResponse(BaseModel):
@@ -67,6 +69,7 @@ class ApplicationResponse(BaseModel):
     applied_date: Optional[datetime]
     created_at: datetime
     updated_at: datetime
+    salary_range: Optional[str]
 
     class Config:
         from_attributes = True

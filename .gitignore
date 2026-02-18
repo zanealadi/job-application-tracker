@@ -30,3 +30,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Alembic
+alembic/versions/__pycache__/
