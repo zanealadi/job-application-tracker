@@ -35,6 +35,30 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
+# SCRAPED JOB SCHEMAS:
+
+# schema for scraped job in responses
+class ScrapedJobResponse(BaseModel):
+    id: int
+    title: str
+    company: str
+    location: Optional[str]
+    url: str
+    description: Optional[str]
+    posted_date: Optional[datetime]
+    source: str
+    scraped_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# schema for list of scraped jobs
+class ScrapedJobListResponse(BaseModel):
+    count: int
+    jobs: list[ScrapedJobResponse]
+
+
+
 # APPLICATION SCHEMAS
 
 # schema for creating new application

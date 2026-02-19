@@ -2,7 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
-from database import SessionLocal, JobApplication, User, Base, engine
+from database import SessionLocal, JobApplication, User, Base, engine, ScrapedJob
+from typing import Optional
 from auth import (
     get_password_hash, 
     verify_password, 
@@ -10,10 +11,11 @@ from auth import (
     get_current_user,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
-
+from scraper import IndeedScraper, MockScraper
 from schemas import (
     UserCreate, UserResponse, Token,
-    ApplicationCreate, ApplicationUpdate, ApplicationResponse, ApplicationListResponse
+    ApplicationCreate, ApplicationUpdate, ApplicationResponse, ApplicationListResponse, ApplicationStatus,
+    ScrapedJobResponse, ScrapedJobListResponse
 )
 
 # creates the tables if they don't exist
@@ -168,3 +170,89 @@ def delete_application(app_id: int, current_user: User = Depends(get_current_use
 @app.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user
+
+# SCRAPING
+@app.post("/scrape/jobs", response_model=ScrapedJobListResponse)
+def scrape_jobs(
+    query: str = "software engineer intern", 
+    location: str = "", max_results: int = 10, 
+    use_mock: bool = True, 
+    current_user: Session = Depends(get_current_user), 
+    db: Session = Depends(get_db)):
+
+    # choose scraper
+    scraper = MockScraper() if use_mock else IndeedScraper()
+
+    scraped_jobs = scraper.search_jobs(query, location, max_results)
+    saved_jobs = []
+    duplicates = 0
+
+    for job_data in scraped_jobs:
+        # check if jobs exists already using url
+        existing = db.query(ScrapedJob).filter(ScrapedJob.url == job_data["url"]).first()
+        if existing:
+            duplicates += 1
+            continue
+        
+        # create new scraped job
+        new_job = ScrapedJob(
+            title=job_data["title"],
+            company=job_data["company"],
+            location=job_data.get("location"),
+            url=job_data["url"],
+            description=job_data.get("description"),
+            source=job_data["source"]
+        )
+        db.add(new_job)
+        saved_jobs.append(new_job)
+    db.commit()
+
+    # refresh saved jobs to get id's
+    for job in saved_jobs:
+        db.refresh(job)
+    
+    return {
+        "count": len(saved_jobs),
+        "jobs": saved_jobs
+    }
+
+# get scraped jobs from database
+@app.get("/scraped-jobs/", response_model=ScrapedJobListResponse)
+def get_scraped_jobs(
+    skip: int = 0,
+    limit: int = 50,
+    source: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    
+    query = db.query(ScrapedJob)
+
+    if source:
+        query = query.filter(ScrapedJob.source == source)
+    
+    jobs = query.order_by(ScrapedJob.scraped_at.desc()).offset(skip).limit(limit).all()
+    return {"count": len(jobs), "jobs": jobs}
+
+# convert scraped job into application tracker
+@app.post("/scraped-jobs/{job_id}/convert")
+def convert_to_application(job_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    scraped_job = db.query(ScrapedJob).filter(ScrapedJob.id == job_id).first()
+
+    if not scraped_job:
+        raise HTTPException(status_code=404, detail="Scraped job not found")
+    
+    # create application from scraped job
+    new_app = JobApplication(
+        user_id=current_user.id,
+        company=scraped_job.company,
+        position=scraped_job.title,
+        status=ApplicationStatus.WISHLIST,
+        job_url=scraped_job.url,
+        notes=f"Found via scraping from {scraped_job.source}"
+    )
+
+    db.add(new_app)
+    db.commit()
+    db.refresh(new_app)
+    return{"message": "Converted to application!", "application_id": new_app.id}

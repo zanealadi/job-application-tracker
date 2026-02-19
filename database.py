@@ -56,6 +56,19 @@ class JobApplication(Base):
     # each application belongs to one user
     user = relationship("User", back_populates="applications")
 
+class ScrapedJob(Base):
+    __tablename__ = "scraped_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    company = Column(String, nullable=False)
+    location = Column(String, nullable=True)
+    url = Column(String, nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+    posted_date = Column(DateTime, nullable=True)
+    source = Column(String, nullable=False)
+    scraped_at = Column(DateTime, default=datetime.now)
+
 # creates the table in the db
 def init_db():
     Base.metadata.create_all(bind=engine)
