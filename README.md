@@ -2,8 +2,8 @@
 
 A job application REST API with JWT Authentication, mock web-scraping, and PostgreSQL database - All deployed on AWS.
 
-**Live API**: http://54.87.136.106:8000
-**Interactive API Documentation**: http://54.87.136.106:8000/docs
+**Live API**: http://52.87.252.91:8000
+**Interactive API Documentation**: http://52.87.252.91:8000/docs
 
 ## Features
 **User Authentication** - Secure JWT token-based authentication with bcrypt password hashing
@@ -231,11 +231,11 @@ This project demonstrates proficiency in:
 
 **Test the live API:**
 
-1. Register: `POST http://54.87.136.106:8000/register`
-2. Login: `POST http://54.87.136.106:8000/token`
-3. Create application: `POST http://54.87.136.106:8000/applications/`
+1. Register: `POST http://52.87.252.91:8000/register`
+2. Login: `POST http://52.87.252.91:8000/token`
+3. Create application: `POST http://52.87.252.91:8000/applications/`
 
-Or use the interactive documentation at http://54.87.136.106:8000/docs
+Or use the interactive documentation at http://52.87.252.91:8000/docs
 
 **Alert**
 API AWS IP would not work in my browser so Postman was used to verify functionality
