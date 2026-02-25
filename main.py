@@ -1,5 +1,9 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from database import SessionLocal, JobApplication, User, Base, engine, ScrapedJob
@@ -21,7 +25,20 @@ from schemas import (
 # creates the tables if they don't exist
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Job Application Tracker")
+app = FastAPI(title="Job Application Tracker API")
+
+# rate limiting
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # dependency to get database session
 def get_db():
@@ -47,7 +64,8 @@ def read_root():
 
 # register a new user
 @app.post("/register", response_model=UserResponse)
-def register(user: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
     # check if user already exists
     existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
@@ -69,7 +87,8 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 
 # login and get access token
 @app.post("/token", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # find user by email
     user = db.query(User).filter(User.email == form_data.username).first()
 
@@ -98,7 +117,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 # add a new job application
 @app.post("/applications", response_model=ApplicationResponse, status_code=status.HTTP_201_CREATED)
-def create_application(application: ApplicationCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def create_application(request: Request, application: ApplicationCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     new_app = JobApplication(
         user_id=current_user.id, # this links to the logged in user
         company=application.company,
@@ -173,7 +193,9 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 
 # SCRAPING
 @app.post("/scrape/jobs", response_model=ScrapedJobListResponse)
+@limiter.limit("10/hour")
 def scrape_jobs(
+    request: Request,
     query: str = "software engineer intern", 
     location: str = "", max_results: int = 10, 
     use_mock: bool = True, 

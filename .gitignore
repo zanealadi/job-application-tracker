@@ -68,3 +68,7 @@ build/
 
 # docker
 docker-compose.override.yml
+
+# task definitions with secrets
+task-definition.json
+ecs-task-trust-policy.json
